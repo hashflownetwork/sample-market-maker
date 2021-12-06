@@ -1,0 +1,16 @@
+{
+  "name": "sample-market-maker",
+  "version": "1.0.0",
+  "description": "Sample code for running a Hashflow market maker.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "victor@hashflow.com",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "winston": "^3.3.3",
+    "ws": "^8.3.0"
+  }
+}
