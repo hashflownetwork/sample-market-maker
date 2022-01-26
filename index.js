@@ -1,5 +1,4 @@
 const { createLogger, format, transports } = require('winston');
-const createError  = require('http-errors')
 
 const dotenv = require('dotenv');
 dotenv.config();
