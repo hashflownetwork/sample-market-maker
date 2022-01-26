@@ -1,4 +1,5 @@
 const { createLogger, format, transports } = require('winston');
+const createError  = require('http-errors')
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -27,7 +28,7 @@ function getWebsocketConnection(
 ) {
   const ws = new WebSocket(`${process.env.HASHFLOW_WS_API}/maker/v1`, {
     headers: {
-      marketmaker: 'TestMM',
+      marketmaker: 'AlfieMM',
     }
   });
   const heartbeat = () => {
@@ -56,6 +57,20 @@ function getWebsocketConnection(
   });
   ws.on('error', err => {
     logger.error(`Websocket error: ${err.message}`);
+  });
+  ws.on('unexpected-response', (_, res) => {
+    let message = '';
+    res.on('data', (chunk) => {
+      message += chunk;
+    });
+    res.on('end', () => {
+      if (res.statusCode === 401) {
+        logger.error(`WS access not authorized. ${message}`);
+      } else {
+        logger.error(`Unexpexted response from server: [${res.statusCode}] ${message}.`);
+      }
+      ws.close()
+    });
   });
 
   return ws;
