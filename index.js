@@ -28,7 +28,7 @@ function getWebsocketConnection(
 ) {
   const ws = new WebSocket(`${process.env.HASHFLOW_WS_API}/maker/v1`, {
     headers: {
-      marketmaker: 'AlfieMM',
+      marketmaker: 'TestMM',
     }
   });
   const heartbeat = () => {
