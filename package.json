@@ -4,7 +4,8 @@
   "description": "Sample code for running a Hashflow market maker.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run": "node index.js"
   },
   "author": "victor@hashflow.com",
   "license": "ISC",
