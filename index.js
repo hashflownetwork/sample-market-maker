@@ -57,6 +57,20 @@ function getWebsocketConnection(
   ws.on('error', err => {
     logger.error(`Websocket error: ${err.message}`);
   });
+  ws.on('unexpected-response', (_, res) => {
+    let message = '';
+    res.on('data', (chunk) => {
+      message += chunk;
+    });
+    res.on('end', () => {
+      if (res.statusCode === 401) {
+        logger.error(`WS access not authorized. ${message}`);
+      } else {
+        logger.error(`Unexpexted response from server: [${res.statusCode}] ${message}.`);
+      }
+      ws.close()
+    });
+  });
 
   return ws;
 }
