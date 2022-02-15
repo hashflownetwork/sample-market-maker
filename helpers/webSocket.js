@@ -2,6 +2,8 @@ const WebSocket = require('ws');
 const dotenv = require('dotenv');
 dotenv.config();
 
+const logger = require('./logger');
+
 const PING_PONG_INTERVAL_MS = 30000;
 const PING_PONG_GRACE_PERIOD_MS = 1000;
 
@@ -65,8 +67,10 @@ function getWebsocketConnection(
   return ws;
 }
 
-export function sendMessage(ws, messageType, message) {
+function sendMessage(ws, messageType, message) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ messageType, message }));
   }
 }
+
+module.exports = {getWebsocketConnection, sendMessage};

@@ -1,15 +1,12 @@
-import logger from './helpers/logger';
-import { EOA, POOL } from './helpers/signature';
-import { sendMessage } from './helpers/webSocket';
+const logger = require('./helpers/logger');
+const { EOA, POOL, signQuote } = require('./helpers/signature');
+const { getTokenByAddress } = require('./helpers/token');
+const { sendMessage } = require('./helpers/webSocket');
+const { SUPPORTED_PAIRS, computePrices } = require('./pricing');
 
-// TODO: Add supported networks/pairs (1 is mainnet)
-const SUPPORTED_PAIRS = {
-  1: [['ETH', 'DAI'], ['DAI', 'ETH'], ['USDC', 'USDT']]  // Example values
-}
+const cachedQuotes = {};
 
-const cachedQuotes = {}
-
-export function processMessage(ws, message) {
+function processMessage(ws, message) {
   logger.info(`Received message ${message.toString()}`);
 
   const decodedMessage = JSON.parse(message.toString());
@@ -41,24 +38,24 @@ export function processMessage(ws, message) {
 }
 
 function processMessageGetPairs(ws, message) {
-  if (!(message.networkId in SUPPORTED_PAIRS)) {
-    sendMessage(ws, 'pairs', { networkId: message.networkId, pairs: [] });
+  const networkId = message.networkId;
+  if (!(networkId in SUPPORTED_PAIRS)) {
+    sendMessage(ws, 'pairs', { networkId: networkId, pairs: [] });
+    return;
   }
 
   const pairs = []
-  for (const pair of SUPPORTED_PAIRS[network]) {
+  for (const pair of SUPPORTED_PAIRS[message.networkId]) {
     pairs.push({ baseTokenName: pair[0], quoteTokenName: pair[1]});
   }
 
-  const apiPairs = {
-    networkId: message.networkId,
-    pairs,
-  };
+  const apiPairs = { networkId, pairs, };
   sendMessage(ws, 'pairs', apiPairs);
 }
 
 function processMessageRfq(ws, message) {
-  if (!(SUPPORTED_NETWORKS.includes(message.networkId))) {
+  const networkId = message.networkId;
+  if (!(networkId in SUPPORTED_PAIRS)) {
     logger.error(`RFQ for unsupported network: ${JSON.stringify(message)}`);
     return;
   }
@@ -68,17 +65,47 @@ function processMessageRfq(ws, message) {
     return;
   }
 
-  // TODO: Implement your own pricing logic
+  const baseToken = getTokenByAddress(networkId, message.baseToken);
+  if (!baseToken) {
+    logger.error(`Unknown base token: ${message.baseToken}`);
+    return;
+  }
+
+  const quoteToken = getTokenByAddress(networkId, message.quoteToken);
+  if (!quoteToken) {
+    logger.error(`Unknown quote token: ${message.quoteToken}`);
+    return;
+  }
+
+  var pairSupported = false;
+  SUPPORTED_PAIRS[networkId].forEach(pair => { 
+    if (pair[0] === baseToken.name && pair[1] === quoteToken.name) {
+      pairSupported = true;
+    };
+  });
+
+  if (!pairSupported) {
+    logger.error(`Unsupported trading pair [${baseToken.name}, ${quoteToken.name}] on ${networkId}`);
+    return;
+  }
+
+  const { baseTokenAmount, quoteTokenAmount } = computePrices(
+    networkId,
+    baseToken,
+    quoteToken,
+    message.baseTokenAmount, 
+    message.quoteTokenAmount
+  );
+
   const apiQuote = {
-    networkId: message.networkId,
+    networkId: networkId,
     rfqId: message.rfqId,
     pool: POOL,
     eoa: EOA,
-    // TODO(optional): Add "eoa: '0x...'" if using EOA for market making
-    baseToken: rfq.baseToken,  // EVM-address
-    quoteToken: rfq.quoteToken,  // EVM-address
-    baseTokenAmount: '1000000000',  // EVM-decimal notation
-    quoteTokenAmount: '1000000000',  // EVM-decimal notation
+    baseToken: message.baseToken,  // EVM-address
+    quoteToken: message.quoteToken,  // EVM-address
+    baseTokenAmount: baseTokenAmount.toFixed(),  // EVM-decimal notation string
+    quoteTokenAmount: quoteTokenAmount.toFixed(),  // EVM-decimal notation string
     fees: '0',
     quoteExpiry: Math.floor(Date.now() / 1000) + 180,  // 3 minutes
   };
@@ -88,10 +115,9 @@ function processMessageRfq(ws, message) {
     ...apiQuote, 
     trader: message.trader, 
     effectiveTrader: message.effectiveTrader
-  }
+  };
 
   sendMessage(ws, 'quote', apiQuote);
-
 }
 
 function processMessageSignQuote(ws, message) {
@@ -103,7 +129,12 @@ function processMessageSignQuote(ws, message) {
     return;
   }
 
-  // TODO (mib): Sign quote
+  const apiSignature = {
+    txid: message.quoteData.txid,
+    signature: signQuote(message.quoteData),
+  };
+
+  sendMessage(ws, 'signature', apiSignature);
 }
 
 function processMessageTrade(ws, message) {
@@ -148,7 +179,7 @@ function validateQuotesMatch(signQuoteData, cachedQuote) {
     && signQuoteData.effectiveTrader === cachedQuote.effectiveTrader;
 }
 
-export function publishPriceLevels(ws) {
+function publishPriceLevels(ws) {
   for (network of Object.keys(SUPPORTED_PAIRS)) {
     for (pairs of SUPPORTED_PAIRS[network]) {
       // TODO (if market making on aggregators): Implement own price levels
@@ -164,3 +195,5 @@ export function publishPriceLevels(ws) {
     }
   } 
 }
+
+module.exports = { processMessage, publishPriceLevels };

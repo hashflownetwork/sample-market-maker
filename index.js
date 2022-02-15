@@ -1,4 +1,5 @@
-import { processMessage, publishPriceLevels } from './messages';
+const { processMessage, publishPriceLevels } = require('./messages');
+const { getWebsocketConnection } = require('./helpers/webSocket');
 
 
 // TODO: Replace this with your market maker name (once added to the backend)

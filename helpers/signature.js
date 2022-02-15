@@ -3,15 +3,15 @@ const { utils } = require('ethers');
 const { ecsign } = require('ethereumjs-util');
 
 // TODO: Add EOA (if using EOA)
-export const EOA = undefined;
+const EOA = undefined;
 
 // TODO: Add correct pool
-export const POOL = '0x123456789abcdef0123456789abcdef012345678';
+const POOL = '0x123456789abcdef0123456789abcdef012345678';
 
-// TODO: Replace with private key –– avoid putting in plaintext for security reasons
-export const PRIVATE_KEY = '0xabcdef000'
+// TODO: Replace with private key –– avoid putting here in plaintext for security reasons
+const PRIVATE_KEY = '0xabcdef0123456789'
 
-export function signQuote(quoteData) {
+function signQuote(quoteData) {
   const kValueOrNonce = quoteData.kValue || quoteData.nonce;
   const fields = [
     "address", 
@@ -25,7 +25,7 @@ export function signQuote(quoteData) {
     "uint256", 
     "uint256", 
     "bytes32"
-  ],
+  ];
 
   const values = [
     quoteData.pool,
@@ -42,9 +42,8 @@ export function signQuote(quoteData) {
   ]
 
   const quoteHash = utils.solidityKeccak256(fields, values);
-  const { v, r, s } = ecsign(hexToBuf(quoteHash), hexToBuf(signerPrivKey));
+  const { v, r, s } = ecsign(hexToBuf(quoteHash), hexToBuf(PRIVATE_KEY));
   return concatRSV(r, s, v);
-
 }
 
 function hexToBuf(value) {
@@ -64,3 +63,5 @@ function concatRSV(r, s, v) {
 function stripHexPrefix(str) {
   return str.slice(0, 2) === '0x' ? str.slice(2) : str;
 }
+
+module.exports = {EOA, POOL, signQuote};
