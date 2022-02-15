@@ -10,5 +10,5 @@ $ yarn
 
 Then, you can run the example file with 
 ```
-$ yarn run
+$ yarn start:mm
 ```

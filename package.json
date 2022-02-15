@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "run": "node index.js"
+    "start:mm": "node index.js"
   },
   "author": "victor@hashflow.com",
   "license": "ISC",
