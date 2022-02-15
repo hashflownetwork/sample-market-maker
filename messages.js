@@ -1,6 +1,6 @@
 const logger = require('./helpers/logger');
 const { EOA, POOL, signQuote } = require('./helpers/signature');
-const { getTokenByAddress } = require('./helpers/token');
+const { getTokenByAddress, convertToDecimals } = require('./helpers/token');
 const { sendMessage } = require('./helpers/webSocket');
 const { SUPPORTED_PAIRS, computePrices } = require('./pricing');
 
@@ -181,14 +181,23 @@ function validateQuotesMatch(signQuoteData, cachedQuote) {
 
 function publishPriceLevels(ws) {
   for (network of Object.keys(SUPPORTED_PAIRS)) {
-    for (pairs of SUPPORTED_PAIRS[network]) {
+    for (pair of SUPPORTED_PAIRS[network]) {
+      const baseToken = getTokenByName(pairs[0]);
+      const quoteToken = getTokenByName(pairs[1]);
+
       // TODO (if market making on aggregators): Implement own price levels
-      const levels = [{level: "1", price: "10000"}, {level: "2", price: "20000"}];
+      const volumes = [1, 2, 4];
+      const levels = volumes.map(level => {
+        const amount = convertToDecimals(new BigNumber(level), baseToken, network);
+        const prices = computePrices(network, baseToken, quoteToken, amount, undefined);
+        const priceRaw = convertFromDecimals(prices, quoteToken, network);
+        return {level: String(level), price: priceRaw.toFixed()}
+      });
 
       const apiPriceLevels = {
         networkId: network,
-        baseTokenName: pairs[0],
-        quoteTokenName: pairs[1],
+        baseTokenName: baseToken.name,
+        quoteTokenName: quoteToken.name,
         levels
       };
       sendMessage(ws, 'priceLevels', apiPriceLevels);
