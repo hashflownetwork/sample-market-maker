@@ -1,5 +1,7 @@
 const { processMessage, publishPriceLevels } = require('./messages');
-const { getWebsocketConnection } = require('./helpers/webSocket');
+const { getWebsocketConnection, sendMessage } = require('./helpers/webSocket');
+const { SUPPORTED_PAIRS } = require('./pricing');
+const { POOL } = require('./helpers/signature');
 
 
 // TODO: Replace this with your market maker name (once added to the backend)
@@ -13,7 +15,11 @@ const levelsInterval = SUPPORT_AGGREGATORS
   : undefined;
 
 const onMessageCallback = message => processMessage(mainSocket, message);
-const onHeartbeatCallback = () => {};
+const onHeartbeatCallback = () => {
+  for (const networkId of Object.keys(SUPPORTED_PAIRS)) {
+    sendMessage(mainSocket, 'subscribeToTrades', { networkId, pool: POOL });
+  }
+};
 const onCloseCallback = () => {
   if (SUPPORT_AGGREGATORS) {
     clearInterval(levelsInterval);

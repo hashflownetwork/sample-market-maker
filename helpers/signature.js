@@ -16,6 +16,7 @@ function signQuote(quoteData) {
   const fields = [
     "address", 
     "address", 
+    "address",
     ...(EOA && "address"), 
     "address", 
     "address", 
@@ -23,6 +24,7 @@ function signQuote(quoteData) {
     "uint256", 
     "uint256", 
     "uint256", 
+    "uint8",
     "uint256", 
     "bytes32"
   ];
@@ -30,6 +32,7 @@ function signQuote(quoteData) {
   const values = [
     quoteData.pool,
     quoteData.trader,
+    quoteData.effectiveTrader ?? quoteData.trader,
     ...(EOA && quoteData.eoa),
     quoteData.baseToken,
     quoteData.quoteToken,
@@ -37,6 +40,7 @@ function signQuote(quoteData) {
     quoteData.quoteTokenAmount.toFixed(),
     quoteData.fees.toFixed(),
     kValueOrNonce,
+    quoteData.flag,
     quoteData.quoteExpiry,
     quoteData.txid
   ]
