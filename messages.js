@@ -55,27 +55,32 @@ function processMessageGetPairs(ws, message) {
   sendMessage(ws, 'pairs', apiPairs);
 }
 
-function processMessageRfq(ws, message) {
+function processMessageRfq(ws, originalMessage) {
+  const message = originalMessage;
   const networkId = message.networkId;
   if (!(networkId in SUPPORTED_PAIRS)) {
     logger.error(`RFQ for unsupported network: ${JSON.stringify(message)}`);
+    sendMessage(ws, 'rfq', { error: 'pair_not_supported', originalMessage });
     return;
   }
 
   if (!message.rfqId) {
     logger.error(`Missing rfqId in 'rfq' request. ${JSON.stringify(message)}`);
+    sendMessage(ws, 'rfq', { error: 'invalid_input', originalMessage });
     return;
   }
 
   const baseToken = getTokenByAddress(networkId, message.baseToken);
   if (!baseToken) {
     logger.error(`Unknown base token: ${message.baseToken}`);
+    sendMessage(ws, 'rfq', { error: 'invalid_input', originalMessage });
     return;
   }
 
   const quoteToken = getTokenByAddress(networkId, message.quoteToken);
   if (!quoteToken) {
     logger.error(`Unknown quote token: ${message.quoteToken}`);
+    sendMessage(ws, 'rfq', { error: 'invalid_input', originalMessage });
     return;
   }
 
@@ -88,6 +93,14 @@ function processMessageRfq(ws, message) {
 
   if (!pairSupported) {
     logger.error(`Unsupported trading pair [${baseToken.name}, ${quoteToken.name}] on ${networkId}`);
+    sendMessage(ws, 'rfq', { error: 'pair_not_supported', originalMessage });
+    return;
+  }
+
+  // TODO: Implement own liquidity logic
+  if (message.baseTokenAmount.gte(10) || message.quoteTokenAmount.gte(10)) {
+    logger.error(`Requested amount exceeds liquidity. ${JSON.stringify(message)}`);
+    sendMessage(ws, 'rfq', { error: 'insufficient_liquidity', originalMessage });
     return;
   }
 
@@ -128,6 +141,7 @@ function processMessageSignQuote(ws, message) {
     !(validateQuotesMatch(message.quoteData, cachedQuotes[message.rfqId]))
   ) {
     logger.error(`Requesting signature for unrecognized quote. ${JSON.stringify(message)}`)
+    sendMessage(ws, 'signQuote', { error: 'payload_not_recognized', originalMessage: message });
     return;
   }
 
@@ -166,7 +180,7 @@ function processMessageTrade(ws, message) {
 
   // TODO: Store trade information for analytics and bookkeeping
 
-  sendMessage(ws, 'tradeAck', txid);
+  sendMessage(ws, 'tradeAck', { txid });
 }
 
 function validateQuotesMatch(signQuoteData, cachedQuote) {
