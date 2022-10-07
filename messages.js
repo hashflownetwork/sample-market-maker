@@ -145,12 +145,16 @@ function processMessageSignQuote(ws, message) {
     return;
   }
 
-  const apiSignature = {
-    txid: message.quoteData.txid,
-    signature: signQuote(message.quoteData),
-  };
+  signQuote(quoteData).then(
+    signature => {
+      const apiSignature = {
+        txid: message.quoteData.txid,
+        signature,
+      };
 
-  sendMessage(ws, 'signature', apiSignature);
+      sendMessage(ws, 'signature', apiSignature);
+    }
+  ).catch(err => {});
 }
 
 function processMessageTrade(ws, message) {
